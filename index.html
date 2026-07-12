@@ -91,6 +91,7 @@ body{padding-bottom:70px;}
 <div class="hdr">
   <div class="hdr-brand">The <em>Editorial</em></div>
   <div style="display:flex;gap:8px;">
+    <button class="hdr-btn ghost" onclick="openLog()">Log Visit</button>
     <button class="hdr-btn ghost" onclick="openAdd()">+ Add</button>
     <button class="hdr-btn primary" onclick="openRegister()">Register Client</button>
   </div>
@@ -128,6 +129,17 @@ body{padding-bottom:70px;}
   </div>
   <div id="pendingList">
     <div class="empty"><div class="empty-icon">📬</div>No pending requests. New bookings appear here when clients submit.</div>
+  </div>
+</div>
+
+<!-- VISIT HISTORY -->
+<div class="section">
+  <div class="section-title">
+    <span>Visit History</span>
+    <button class="add-btn" onclick="openLog()">Log Visit</button>
+  </div>
+  <div id="visitList">
+    <div class="empty"><div class="empty-icon">✂️</div>No visits logged yet. Use "Log Visit" to add past appointments.</div>
   </div>
 </div>
 
@@ -233,12 +245,79 @@ body{padding-bottom:70px;}
   </div>
 </div>
 
+<!-- LOG VISIT MODAL -->
+<div class="overlay" id="logModal">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-hd-title">Log a <em>Visit</em></div>
+      <button class="modal-close" onclick="close('logModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:rgba(43,31,22,0.5);margin-bottom:16px;line-height:1.7;">Use this to log past visits from January until now. Every visit builds your revenue history and client spend totals.</p>
+      <div class="field">
+        <label>Client Name *</label>
+        <input id="l-name" placeholder="Start typing a name..." oninput="suggestClient(this.value)">
+        <div id="l-suggestions" style="background:#fff;border:0.5px solid rgba(43,31,22,0.15);border-radius:4px;display:none;max-height:160px;overflow-y:auto;margin-top:4px;"></div>
+      </div>
+      <div class="field"><label>Service *</label>
+        <select id="l-service">
+          <option value="">Select service</option>
+          <option>The Grace — $90</option><option>The Lily — $60</option>
+          <option>The Emma — $95</option><option>The Sarah — $125</option>
+          <option>The Anna — $215</option><option>The Chloe — $185</option>
+          <option>The Ava — $245</option><option>The Harper Consult — $25</option>
+          <option>The Press — $165+</option><option>The Wave — $150+</option>
+          <option>The Olivia — $60</option><option>The Cher — $90</option>
+          <option>The James — $60</option><option>The Thomas — $90</option>
+          <option>The Mini Edit — $45</option><option>Consultation — $25</option>
+          <option>Summer Gloss Reset — $100</option><option>Fight the Frizz — $30</option>
+          <option>Evelyn Session</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Visit Date *</label><input type="date" id="l-date"></div>
+        <div class="field"><label>Amount Paid *</label><input type="number" id="l-amount" placeholder="0"></div>
+      </div>
+      <div class="field"><label>Stylist</label>
+        <select id="l-stylist"><option>Gregory</option><option>Evelyn</option></select>
+      </div>
+      <div class="field"><label>Add-On Used</label>
+        <select id="l-addon">
+          <option value="">None</option>
+          <option>Haircut (+$40)</option>
+          <option>Extra Product Bowl (+$30)</option>
+          <option>Standard Treatment (+$20)</option>
+          <option>Seasonal Treatment (+$30)</option>
+          <option>Root Color (+$50)</option>
+          <option>Root Color + Haircut (+$90)</option>
+        </select>
+      </div>
+      <div class="field"><label>Perk Used</label>
+        <select id="l-perk">
+          <option value="">None</option>
+          <option>Welcome drink</option>
+          <option>Quarterly gift given</option>
+          <option>Beauty Elite discount</option>
+          <option>Birthday reward</option>
+          <option>CIRCLE20 coupon</option>
+          <option>Referral reward</option>
+        </select>
+      </div>
+      <div class="field"><label>Notes (formula, observations)</label>
+        <textarea id="l-notes" placeholder="Color formula used, client feedback, product sold..."></textarea>
+      </div>
+      <button class="modal-submit" onclick="saveVisit()">Save Visit →</button>
+    </div>
+  </div>
+</div>
+
 <!-- BOTTOM NAV -->
 <div class="bottom-nav">
   <button class="bnav-btn active" onclick="scrollTo(0,0)"><span>🗓</span><span>Schedule</span></button>
+  <button class="bnav-btn" onclick="openLog()"><span>✂️</span><span>Log Visit</span></button>
   <button class="bnav-btn" onclick="openAdd()"><span>＋</span><span>Add</span></button>
   <button class="bnav-btn" onclick="openRegister()"><span>👤</span><span>Register</span></button>
-  <button class="bnav-btn" onclick="window.open('https://theeditorialhouston.com/book.html','_blank')"><span>✦</span><span>Booking</span></button>
+  <button class="bnav-btn" onclick="window.open('https://theeditorialhouston.com','_blank')"><span>✦</span><span>Website</span></button>
 </div>
 
 <script>
@@ -246,25 +325,17 @@ body{padding-bottom:70px;}
 var DB = {
   appointments: JSON.parse(localStorage.getItem('ed_appts') || '[]'),
   clients: JSON.parse(localStorage.getItem('ed_clients') || '[]'),
+  visits: JSON.parse(localStorage.getItem('ed_visits') || '[]'),
   save: function() {
     localStorage.setItem('ed_appts', JSON.stringify(this.appointments));
     localStorage.setItem('ed_clients', JSON.stringify(this.clients));
+    localStorage.setItem('ed_visits', JSON.stringify(this.visits));
   }
 };
 
-// Seed Beauty Elite if first load
+// Seed all clients if first load
 if (!DB.clients.length) {
-  var today = new Date().toISOString().split('T')[0];
-  DB.clients = [
-    {id:1,first:'Alieda', last:'Martinez',email:'',phone:'',tier:'Beauty Elite',joined:today},
-    {id:2,first:'Israel', last:'Garcia',  email:'',phone:'',tier:'Beauty Elite',joined:today},
-    {id:3,first:'Janelle',last:'Miller',  email:'',phone:'',tier:'Beauty Elite',joined:today},
-    {id:4,first:'Norma',  last:'Juarez',  email:'',phone:'',tier:'Beauty Elite',joined:today},
-    {id:5,first:'Riva',   last:'Saenz',   email:'',phone:'',tier:'Beauty Elite',joined:today},
-    {id:6,first:'Selina', last:'Rios',    email:'',phone:'',tier:'Beauty Elite',joined:today},
-    {id:7,first:'Priya',  last:'Gopinath',email:'',phone:'',tier:'Beauty Elite',joined:today},
-    {id:8,first:'Anthony',last:'Gamez',   email:'',phone:'',tier:'Beauty Elite',joined:today}
-  ];
+  DB.clients = [{"id":1001,"first":"Alieda","last":"Martinez","email":"","phone":"","birthday":"","tier":"Beauty Elite","firstVisit":"","lastVisit":"","visitCount":0,"lifetimeSpend":0,"notes":"","joined":"2026-01-01","active":true},{"id":1002,"first":"Riva","last":"Saenz","email":"","phone":"","birthday":"","tier":"Beauty Elite","firstVisit":"","lastVisit":"","visitCount":0,"lifetimeSpend":0,"notes":"","joined":"2026-01-01","active":true},{"id":1003,"first":"Anthony","last":"Gamez","email":"","phone":"","birthday":"","tier":"Beauty Elite","firstVisit":"","lastVisit":"","visitCount":0,"lifetimeSpend":0,"notes":"","joined":"2026-01-01","active":true},{"id":1,"first":"Diana","last":"Dupuy","email":"DLDUPUY@SBCGLOBAL.NET","phone":"+15122879311","birthday":"","tier":"Friends Club","firstVisit":"2026-01-15","lastVisit":"2026-07-08","visitCount":7,"lifetimeSpend":903.37,"notes":"","joined":"2026-01-15","active":true},{"id":2,"first":"Eloy","last":"Leibas","email":"eloyleibas@gmail.com","phone":"+12815073865","birthday":"07/19","tier":"Friends Club","firstVisit":"2022-10-06","lastVisit":"2026-06-15","visitCount":28,"lifetimeSpend":1484.3,"notes":"","joined":"2022-10-06","active":true},{"id":3,"first":"Eva","last":"Lazaro","email":"grodrg5@me.com","phone":"+18326411386","birthday":"","tier":"Friends Club","firstVisit":"2019-05-08","lastVisit":"2026-06-25","visitCount":15,"lifetimeSpend":1839.52,"notes":"","joined":"2019-05-08","active":true},{"id":4,"first":"Israel","last":"Garcia","email":"israelg6778@gmail.com","phone":"+12819005745","birthday":"","tier":"Beauty Elite","firstVisit":"2013-08-28","lastVisit":"2026-06-10","visitCount":26,"lifetimeSpend":2001.35,"notes":"","joined":"2013-08-28","active":true},{"id":5,"first":"Janelle","last":"Miller","email":"mcj125@yahoo.com","phone":"+18327558332","birthday":"","tier":"Beauty Elite","firstVisit":"2021-04-11","lastVisit":"2026-07-10","visitCount":77,"lifetimeSpend":5888.5,"notes":"","joined":"2021-04-11","active":true},{"id":6,"first":"Norma","last":"Juarez","email":"Njuarez0830@att.net","phone":"+17134463483","birthday":"","tier":"Beauty Elite","firstVisit":"2024-07-01","lastVisit":"2026-07-10","visitCount":36,"lifetimeSpend":4752.3,"notes":"","joined":"2024-07-01","active":true},{"id":7,"first":"Selina","last":"Rios","email":"selinarios85@gmail.com","phone":"+18325422747","birthday":"05/22","tier":"Beauty Elite","firstVisit":"2019-10-18","lastVisit":"2026-07-02","visitCount":54,"lifetimeSpend":6570.76,"notes":"","joined":"2019-10-18","active":true},{"id":8,"first":"Abigail","last":"Cedillo","email":"abigailcedillo123@yahoo.com","phone":"+18323823045","birthday":"","tier":"Friends Club","firstVisit":"2014-08-22","lastVisit":"2026-06-10","visitCount":23,"lifetimeSpend":2767.23,"notes":"","joined":"2014-08-22","active":true},{"id":9,"first":"Andrea","last":"Cuba","email":"grodrg5@me.com","phone":"+19172549695","birthday":"","tier":"Friends Club","firstVisit":"2026-03-18","lastVisit":"2026-06-10","visitCount":3,"lifetimeSpend":433.0,"notes":"","joined":"2026-03-18","active":true},{"id":10,"first":"Angela","last":"Banda","email":"Bandasergio@yahoo.com","phone":"+18322362714","birthday":"","tier":"Friends Club","firstVisit":"2019-11-18","lastVisit":"2026-03-26","visitCount":47,"lifetimeSpend":4713.52,"notes":"","joined":"2019-11-18","active":true},{"id":11,"first":"Angelica","last":"Olquin","email":"angelicaolquin@gmail.com","phone":"+18325787311","birthday":"","tier":"Friends Club","firstVisit":"2015-02-19","lastVisit":"2026-06-14","visitCount":9,"lifetimeSpend":805.75,"notes":"","joined":"2015-02-19","active":true},{"id":12,"first":"Annmarie","last":"Cunningham","email":"acunnin2@knoll.com","phone":"+18327820254","birthday":"","tier":"Friends Club","firstVisit":"2021-05-21","lastVisit":"2026-06-10","visitCount":5,"lifetimeSpend":1136.62,"notes":"","joined":"2021-05-21","active":true},{"id":13,"first":"April","last":"Cantu","email":"aprilmcantu@yahoo.com","phone":"+18323312766","birthday":"","tier":"Friends Club","firstVisit":"2020-05-18","lastVisit":"2026-03-14","visitCount":38,"lifetimeSpend":5228.52,"notes":"","joined":"2020-05-18","active":true},{"id":14,"first":"Aracely","last":"Cedillo","email":"aracelycedillo123@icloud.com","phone":"+18326093634","birthday":"","tier":"Friends Club","firstVisit":"2024-06-18","lastVisit":"2026-06-10","visitCount":10,"lifetimeSpend":1244.89,"notes":"","joined":"2024-06-18","active":true},{"id":15,"first":"Arden","last":"Fayard","email":"arden.fayard@gmail.com","phone":"+17133578415","birthday":"06/06","tier":"Friends Club","firstVisit":"2025-10-29","lastVisit":"2026-06-17","visitCount":3,"lifetimeSpend":217.85,"notes":"","joined":"2025-10-29","active":true},{"id":16,"first":"Arianna","last":"Vara","email":"arivara11@gmail.com","phone":"+18325892589","birthday":"","tier":"Friends Club","firstVisit":"2021-08-17","lastVisit":"2026-05-26","visitCount":7,"lifetimeSpend":384.27,"notes":"","joined":"2021-08-17","active":true},{"id":17,"first":"Ashley","last":"Ruiz","email":"ash_co2005@yahoo.com","phone":"+18326619123","birthday":"","tier":"Friends Club","firstVisit":"2019-10-09","lastVisit":"2026-07-03","visitCount":9,"lifetimeSpend":998.85,"notes":"","joined":"2019-10-09","active":true},{"id":18,"first":"Aurea","last":"Riojas","email":"aureariojas@gmail.com","phone":"+17133047863","birthday":"","tier":"Friends Club","firstVisit":"2021-04-16","lastVisit":"2026-04-21","visitCount":10,"lifetimeSpend":1300.63,"notes":"","joined":"2021-04-16","active":true},{"id":19,"first":"Beatrice","last":"Marquez","email":"","phone":"+17133916842","birthday":"","tier":"Friends Club","firstVisit":"2026-01-27","lastVisit":"2026-06-07","visitCount":3,"lifetimeSpend":403.18,"notes":"","joined":"2026-01-27","active":true},{"id":20,"first":"Bianca","last":"Camarillo","email":"Bsamaniego2@yahoo.com","phone":"+19152016274","birthday":"02/04","tier":"Friends Club","firstVisit":"2025-03-18","lastVisit":"2026-06-16","visitCount":6,"lifetimeSpend":766.94,"notes":"","joined":"2025-03-18","active":true},{"id":21,"first":"Bob","last":"Ramona","email":"","phone":"+12818316732","birthday":"","tier":"Friends Club","firstVisit":"2026-01-22","lastVisit":"2026-05-12","visitCount":2,"lifetimeSpend":152.63,"notes":"","joined":"2026-01-22","active":true},{"id":22,"first":"Brianna","last":"Vargas","email":"shielenev@gmail.com","phone":"+18323870871","birthday":"","tier":"Friends Club","firstVisit":"2022-09-23","lastVisit":"2026-05-23","visitCount":5,"lifetimeSpend":690.65,"notes":"","joined":"2022-09-23","active":true},{"id":23,"first":"Chiman","last":"Muhammad","email":"Chiman.chicka@gmail.com","phone":"+12025202473","birthday":"","tier":"Friends Club","firstVisit":"2025-12-07","lastVisit":"2025-12-12","visitCount":2,"lifetimeSpend":119.07,"notes":"","joined":"2025-12-07","active":true},{"id":24,"first":"Citlaly","last":"Paz","email":"citlaly_paz@yahoo.com","phone":"+18322602802","birthday":"","tier":"Friends Club","firstVisit":"2020-06-05","lastVisit":"2026-05-29","visitCount":6,"lifetimeSpend":953.53,"notes":"","joined":"2020-06-05","active":true},{"id":25,"first":"Claudia","last":"Perez","email":"claudi1277@gmail.com","phone":"+18326079794","birthday":"","tier":"Friends Club","firstVisit":"2013-08-27","lastVisit":"2026-06-12","visitCount":28,"lifetimeSpend":2444.25,"notes":"","joined":"2013-08-27","active":true},{"id":26,"first":"Corina","last":"Tejeda","email":"corina_tejeda@yahoo.com","phone":"+18328001812","birthday":"","tier":"Friends Club","firstVisit":"2013-11-20","lastVisit":"2026-06-10","visitCount":16,"lifetimeSpend":2181.9,"notes":"","joined":"2013-11-20","active":true},{"id":27,"first":"Cristhel","last":"Ortiz","email":"crsvldz22@gmail.com","phone":"+18326616336","birthday":"","tier":"Friends Club","firstVisit":"2019-10-17","lastVisit":"2026-06-29","visitCount":12,"lifetimeSpend":986.53,"notes":"","joined":"2019-10-17","active":true},{"id":28,"first":"Crystal","last":"Wolsey","email":"wolsey.c@gmail.com","phone":"+17135850939","birthday":"","tier":"Friends Club","firstVisit":"2014-06-26","lastVisit":"2026-06-10","visitCount":19,"lifetimeSpend":2098.74,"notes":"","joined":"2014-06-26","active":true},{"id":29,"first":"Cynthia","last":"Alcocer Guzman","email":"cynthiadiane1@hotmail.com","phone":"+17134931479","birthday":"","tier":"Friends Club","firstVisit":"2020-06-17","lastVisit":"2026-03-23","visitCount":30,"lifetimeSpend":3041.02,"notes":"","joined":"2020-06-17","active":true},{"id":30,"first":"David","last":"Grayson","email":"davidggrayson@gmail.com","phone":"+18325817864","birthday":"","tier":"Friends Club","firstVisit":"2019-11-08","lastVisit":"2026-06-10","visitCount":12,"lifetimeSpend":736.66,"notes":"","joined":"2019-11-08","active":true},{"id":31,"first":"Debbie","last":"Garlock","email":"garlocd@yahoo.com","phone":"+18326919970","birthday":"","tier":"Friends Club","firstVisit":"2023-10-22","lastVisit":"2026-02-04","visitCount":7,"lifetimeSpend":1169.12,"notes":"","joined":"2023-10-22","active":true},{"id":32,"first":"Denise","last":"Hernandez","email":"grodrg5@me.com","phone":"+17135384653","birthday":"","tier":"Friends Club","firstVisit":"2026-03-18","lastVisit":"2026-07-03","visitCount":3,"lifetimeSpend":654.91,"notes":"","joined":"2026-03-18","active":true},{"id":33,"first":"D\u00edana","last":"Villarreal","email":"divillar@aol.com","phone":"+17133059106","birthday":"05/06","tier":"Friends Club","firstVisit":"2013-09-11","lastVisit":"2026-06-28","visitCount":47,"lifetimeSpend":2143.68,"notes":"","joined":"2013-09-11","active":true},{"id":34,"first":"Elijah","last":"Gutierrez","email":"elijahgb05@gmail.com","phone":"+18328536186","birthday":"01/26","tier":"Friends Club","firstVisit":"2025-05-11","lastVisit":"2026-06-20","visitCount":6,"lifetimeSpend":595.36,"notes":"","joined":"2025-05-11","active":true},{"id":35,"first":"Eloy","last":"Escobar","email":"grodrg5@me.com","phone":"+17138829427","birthday":"","tier":"Friends Club","firstVisit":"2026-01-13","lastVisit":"2026-06-09","visitCount":2,"lifetimeSpend":119.08,"notes":"","joined":"2026-01-13","active":true},{"id":36,"first":"Emily","last":"Aven","email":"emaaven@gmail.com","phone":"+17138547752","birthday":"","tier":"Friends Club","firstVisit":"2026-01-19","lastVisit":"2026-05-03","visitCount":4,"lifetimeSpend":236.5,"notes":"","joined":"2026-01-19","active":true},{"id":37,"first":"Evelyn","last":"Hidalgo","email":"evhidalgo28@gmail.com","phone":"+18329784808","birthday":"","tier":"Friends Club","firstVisit":"2025-06-11","lastVisit":"2026-04-03","visitCount":3,"lifetimeSpend":523.67,"notes":"","joined":"2025-06-11","active":true},{"id":38,"first":"Franchesca","last":"Morel","email":"franchesca.morel@proton.me","phone":"+13479173808","birthday":"","tier":"Friends Club","firstVisit":"2026-04-27","lastVisit":"2026-05-06","visitCount":2,"lifetimeSpend":838.93,"notes":"","joined":"2026-04-27","active":true},{"id":39,"first":"Francisco","last":"Alvarez","email":"alvarezciscoj@gmail.com","phone":"+18323647667","birthday":"","tier":"Friends Club","firstVisit":"2020-05-18","lastVisit":"2026-06-22","visitCount":18,"lifetimeSpend":930.92,"notes":"","joined":"2020-05-18","active":true},{"id":40,"first":"Gina","last":"Cantu","email":"ginnacantu@icloud.com","phone":"+17139223142","birthday":"","tier":"Friends Club","firstVisit":"2012-12-23","lastVisit":"2026-04-21","visitCount":37,"lifetimeSpend":3912.17,"notes":"","joined":"2012-12-23","active":true},{"id":41,"first":"Gizelle","last":"Gallegos","email":"gizellegallegos@gmail.com","phone":"+18327625097","birthday":"","tier":"Friends Club","firstVisit":"2025-09-15","lastVisit":"2026-04-30","visitCount":3,"lifetimeSpend":570.08,"notes":"","joined":"2025-09-15","active":true},{"id":42,"first":"Grace","last":"Trevino","email":"deleon.grace@gmail.com","phone":"+17135507237","birthday":"","tier":"Friends Club","firstVisit":"2025-07-24","lastVisit":"2026-05-02","visitCount":3,"lifetimeSpend":174.12,"notes":"","joined":"2025-07-24","active":true},{"id":43,"first":"Gracie","last":"Torres","email":"gyt04@yahoo.com","phone":"+17138766247","birthday":"","tier":"Friends Club","firstVisit":"2019-10-12","lastVisit":"2026-07-01","visitCount":27,"lifetimeSpend":2310.65,"notes":"","joined":"2019-10-12","active":true},{"id":44,"first":"Hermalinda","last":"Alegria","email":"alegriahermelinda@gmail.com","phone":"+17134160584","birthday":"","tier":"Friends Club","firstVisit":"2020-05-23","lastVisit":"2026-07-11","visitCount":20,"lifetimeSpend":1655.21,"notes":"","joined":"2020-05-23","active":true},{"id":45,"first":"Hollie","last":"Carrizales","email":"holliec2012@yahoo.com","phone":"+17132054233","birthday":"","tier":"Friends Club","firstVisit":"2013-08-24","lastVisit":"2026-06-09","visitCount":23,"lifetimeSpend":1837.68,"notes":"","joined":"2013-08-24","active":true},{"id":46,"first":"Holly","last":"Rodriguez","email":"hollyrodriguez@me.com","phone":"+18322629410","birthday":"08/08","tier":"Friends Club","firstVisit":"2018-10-19","lastVisit":"2026-06-15","visitCount":25,"lifetimeSpend":3554.25,"notes":"","joined":"2018-10-19","active":true},{"id":47,"first":"Hope","last":"Palomares","email":"","phone":"+12817027722","birthday":"","tier":"Friends Club","firstVisit":"2026-03-16","lastVisit":"2026-04-19","visitCount":2,"lifetimeSpend":258.16,"notes":"","joined":"2026-03-16","active":true},{"id":48,"first":"Jackie","last":"Gomez","email":"Jackiegomez72@gmail.com","phone":"+18326381269","birthday":"","tier":"Friends Club","firstVisit":"2024-04-05","lastVisit":"2026-04-15","visitCount":4,"lifetimeSpend":598.09,"notes":"","joined":"2024-04-05","active":true},{"id":49,"first":"Jackie","last":"Roman","email":"jromansccs@gmail.com","phone":"+17134440339","birthday":"","tier":"Friends Club","firstVisit":"2022-06-18","lastVisit":"2026-06-17","visitCount":4,"lifetimeSpend":216.5,"notes":"","joined":"2022-06-18","active":true},{"id":50,"first":"Jesus","last":"Calderon","email":"calderon1990jesus@gmail.com","phone":"+18323126480","birthday":"","tier":"Friends Club","firstVisit":"2026-01-27","lastVisit":"2026-07-11","visitCount":4,"lifetimeSpend":502.73,"notes":"","joined":"2026-01-27","active":true},{"id":51,"first":"Joann","last":"Medrano","email":"grodrg5@me.com","phone":"+18322330133","birthday":"","tier":"Friends Club","firstVisit":"2023-05-18","lastVisit":"2026-06-10","visitCount":9,"lifetimeSpend":2056.77,"notes":"","joined":"2023-05-18","active":true},{"id":52,"first":"Kathy","last":"Rodriguez","email":"kathyrodriguez4050@sbcglobal.net","phone":"+18326568989","birthday":"","tier":"Friends Club","firstVisit":"2013-06-26","lastVisit":"2026-03-22","visitCount":39,"lifetimeSpend":5262.45,"notes":"","joined":"2013-06-26","active":true},{"id":53,"first":"Kelly","last":"Friend","email":"case2kl@yahoo.com","phone":"+15862916040","birthday":"","tier":"Friends Club","firstVisit":"2022-04-25","lastVisit":"2026-05-10","visitCount":5,"lifetimeSpend":561.25,"notes":"","joined":"2022-04-25","active":true},{"id":54,"first":"Kim","last":"Moyers","email":"Moyers875@gmail.com","phone":"+17132047400","birthday":"","tier":"Friends Club","firstVisit":"2013-03-30","lastVisit":"2026-06-25","visitCount":22,"lifetimeSpend":2995.65,"notes":"","joined":"2013-03-30","active":true},{"id":55,"first":"Kimberly","last":"Rainwater","email":"kim069925@yahoo.com","phone":"+18328017019","birthday":"","tier":"Friends Club","firstVisit":"2020-05-18","lastVisit":"2026-07-08","visitCount":16,"lifetimeSpend":2549.3,"notes":"","joined":"2020-05-18","active":true},{"id":56,"first":"Kimberly","last":"Winters","email":"winters.kim@yahoo.com","phone":"+17135056403","birthday":"","tier":"Friends Club","firstVisit":"2021-04-16","lastVisit":"2026-06-09","visitCount":8,"lifetimeSpend":1296.41,"notes":"","joined":"2021-04-16","active":true},{"id":57,"first":"Laura","last":"Carter","email":"Lauraortiz13@yahoo.com","phone":"+17138298585","birthday":"","tier":"Friends Club","firstVisit":"2018-10-19","lastVisit":"2026-07-05","visitCount":17,"lifetimeSpend":2777.04,"notes":"","joined":"2018-10-19","active":true},{"id":58,"first":"Leah","last":"Hinton","email":"68hinton@gmail.com","phone":"+17703340368","birthday":"","tier":"Friends Club","firstVisit":"2018-08-19","lastVisit":"2026-06-10","visitCount":13,"lifetimeSpend":1212.66,"notes":"","joined":"2018-08-19","active":true},{"id":59,"first":"Lety","last":"","email":"unikrn12@yahoo.com","phone":"","birthday":"","tier":"Friends Club","firstVisit":"2013-04-06","lastVisit":"2026-06-11","visitCount":15,"lifetimeSpend":2401.47,"notes":"","joined":"2013-04-06","active":true},{"id":60,"first":"Lidia","last":"Ortiz","email":"ortiz_lidia62@yahoo.com","phone":"+18327584497","birthday":"07/16","tier":"Friends Club","firstVisit":"2013-09-11","lastVisit":"2026-06-30","visitCount":39,"lifetimeSpend":2562.14,"notes":"","joined":"2013-09-11","active":true},{"id":61,"first":"Liliana","last":"Balderas","email":"liliana_gonzalez2007@yahoo.com","phone":"+18328180710","birthday":"","tier":"Friends Club","firstVisit":"2022-04-19","lastVisit":"2026-05-15","visitCount":16,"lifetimeSpend":2309.52,"notes":"","joined":"2022-04-19","active":true},{"id":62,"first":"Lissette","last":"Sanchez","email":"lissettesanchez324@gmail.com","phone":"+18326832889","birthday":"","tier":"Friends Club","firstVisit":"2014-02-26","lastVisit":"2026-06-10","visitCount":19,"lifetimeSpend":1578.09,"notes":"","joined":"2014-02-26","active":true},{"id":63,"first":"Ludy","last":"Campos","email":"ludysch22@hotmail.com","phone":"+17135332212","birthday":"","tier":"Friends Club","firstVisit":"2020-10-16","lastVisit":"2026-06-27","visitCount":15,"lifetimeSpend":1828.61,"notes":"","joined":"2020-10-16","active":true},{"id":64,"first":"Lydia","last":"Gonzales","email":"gonzaleslydiar@yahoo.com","phone":"+17134445208","birthday":"","tier":"Friends Club","firstVisit":"2013-08-17","lastVisit":"2026-05-13","visitCount":38,"lifetimeSpend":3468.53,"notes":"","joined":"2013-08-17","active":true},{"id":65,"first":"Maggie","last":"Gallegos","email":"maggieuresti01@yahoo.com","phone":"+18322758130","birthday":"","tier":"Friends Club","firstVisit":"2014-06-18","lastVisit":"2026-05-06","visitCount":24,"lifetimeSpend":3352.7,"notes":"","joined":"2014-06-18","active":true},{"id":66,"first":"Marissa","last":"Camarena","email":"mbcamarena04@yahoo.com","phone":"+18326207870","birthday":"","tier":"Friends Club","firstVisit":"2023-07-14","lastVisit":"2026-06-03","visitCount":5,"lifetimeSpend":860.59,"notes":"","joined":"2023-07-14","active":true},{"id":67,"first":"Maryam","last":"Fereydoon","email":"mfereydoon77@yahoo.com","phone":"+18328147171","birthday":"","tier":"Friends Club","firstVisit":"2025-03-02","lastVisit":"2025-12-30","visitCount":7,"lifetimeSpend":704.72,"notes":"","joined":"2025-03-02","active":true},{"id":68,"first":"Mayra","last":"Mireles","email":"kiki_rox05@yahoo.com","phone":"+18326894161","birthday":"09/10","tier":"Friends Club","firstVisit":"2020-07-14","lastVisit":"2026-06-28","visitCount":46,"lifetimeSpend":3002.08,"notes":"","joined":"2020-07-14","active":true},{"id":69,"first":"Melani","last":"Lopez","email":"bam_melani@live.com","phone":"+18323316995","birthday":"","tier":"Friends Club","firstVisit":"2014-05-30","lastVisit":"2026-05-13","visitCount":17,"lifetimeSpend":1416.89,"notes":"","joined":"2014-05-30","active":true},{"id":70,"first":"Melissa","last":"Elizondo","email":"star637@aol.com","phone":"+13108801149","birthday":"","tier":"Friends Club","firstVisit":"2021-10-07","lastVisit":"2026-06-10","visitCount":7,"lifetimeSpend":782.11,"notes":"","joined":"2021-10-07","active":true},{"id":71,"first":"Michelle","last":"Vara","email":"shellyvara@yahoo.com","phone":"+18326410161","birthday":"08/22","tier":"Friends Club","firstVisit":"2022-07-07","lastVisit":"2026-06-27","visitCount":13,"lifetimeSpend":2159.63,"notes":"","joined":"2022-07-07","active":true},{"id":72,"first":"Miriam","last":"Morton","email":"Miriamjmorton@gmail.com","phone":"+18328685795","birthday":"","tier":"Friends Club","firstVisit":"2026-05-23","lastVisit":"2026-06-15","visitCount":2,"lifetimeSpend":382.64,"notes":"","joined":"2026-05-23","active":true},{"id":73,"first":"Mirthala","last":"Escoto","email":"mescoto1320@yahoo.com","phone":"+17137759859","birthday":"","tier":"Friends Club","firstVisit":"2021-01-22","lastVisit":"2026-06-27","visitCount":10,"lifetimeSpend":1026.74,"notes":"","joined":"2021-01-22","active":true},{"id":74,"first":"Monica","last":"Genera","email":"genera2006@rocketmail.com","phone":"+17139228305","birthday":"","tier":"Friends Club","firstVisit":"2021-07-06","lastVisit":"2026-04-09","visitCount":23,"lifetimeSpend":2487.03,"notes":"","joined":"2021-07-06","active":true},{"id":75,"first":"Morganne","last":"Ovalle","email":"morganne06alyson@yahoo.com","phone":"+17132135381","birthday":"","tier":"Friends Club","firstVisit":"2021-01-14","lastVisit":"2026-06-22","visitCount":16,"lifetimeSpend":1883.56,"notes":"","joined":"2021-01-14","active":true},{"id":76,"first":"Nanse","last":"Zubieta","email":"zubietan009@gmail.com","phone":"+12812354896","birthday":"09/16","tier":"Friends Club","firstVisit":"2021-09-28","lastVisit":"2026-07-05","visitCount":19,"lifetimeSpend":2603.68,"notes":"","joined":"2021-09-28","active":true},{"id":77,"first":"Nora","last":"Bernal","email":"Nora.morales5570@gmail.com","phone":"+18328775570","birthday":"","tier":"Friends Club","firstVisit":"2019-10-18","lastVisit":"2026-06-09","visitCount":32,"lifetimeSpend":4645.23,"notes":"","joined":"2019-10-18","active":true},{"id":78,"first":"Oscar","last":"Tamez","email":"Oscartamezjr@hotmail.com","phone":"+17132569678","birthday":"","tier":"Friends Club","firstVisit":"2013-12-08","lastVisit":"2026-06-10","visitCount":8,"lifetimeSpend":368.51,"notes":"","joined":"2013-12-08","active":true},{"id":79,"first":"Priya","last":"Gopinath","email":"smilepg29@hotmail.com","phone":"+18325786019","birthday":"","tier":"Beauty Elite","firstVisit":"2020-05-22","lastVisit":"2026-07-08","visitCount":13,"lifetimeSpend":996.01,"notes":"","joined":"2020-05-22","active":true},{"id":80,"first":"Reagan","last":"Nunez","email":"reaganjaylin@gmail.com","phone":"+12816050279","birthday":"","tier":"Friends Club","firstVisit":"2020-05-22","lastVisit":"2026-05-07","visitCount":10,"lifetimeSpend":1199.22,"notes":"","joined":"2020-05-22","active":true},{"id":81,"first":"Rebecca","last":"Ortiz","email":"piguina06@yahoo.com","phone":"+17136791513","birthday":"","tier":"Friends Club","firstVisit":"2012-12-29","lastVisit":"2026-06-01","visitCount":27,"lifetimeSpend":1855.88,"notes":"","joined":"2012-12-29","active":true},{"id":82,"first":"Reina","last":"Paz","email":"repaz78@gmail.com","phone":"+18322626183","birthday":"","tier":"Friends Club","firstVisit":"2012-12-27","lastVisit":"2026-05-01","visitCount":36,"lifetimeSpend":4772.94,"notes":"","joined":"2012-12-27","active":true},{"id":83,"first":"Renee","last":"Alaeinejad","email":"reneealaei@aol.com","phone":"+18326409870","birthday":"","tier":"Friends Club","firstVisit":"2020-06-19","lastVisit":"2026-04-21","visitCount":20,"lifetimeSpend":3745.46,"notes":"","joined":"2020-06-19","active":true},{"id":84,"first":"Rita","last":"Rodriguez","email":"","phone":"+12813820820","birthday":"","tier":"Friends Club","firstVisit":"2020-06-19","lastVisit":"2026-07-03","visitCount":41,"lifetimeSpend":3188.78,"notes":"","joined":"2020-06-19","active":true},{"id":85,"first":"Roberta","last":"Rodriguez","email":"rodriguez.roberta@me.com","phone":"+17134095009","birthday":"02/11","tier":"Friends Club","firstVisit":"2024-09-16","lastVisit":"2026-07-04","visitCount":6,"lifetimeSpend":697.15,"notes":"","joined":"2024-09-16","active":true},{"id":86,"first":"Ruth","last":"Avila","email":"rumiavila@yahoo.com","phone":"+17134594832","birthday":"04/25","tier":"Friends Club","firstVisit":"2014-07-23","lastVisit":"2026-07-02","visitCount":41,"lifetimeSpend":4262.04,"notes":"","joined":"2014-07-23","active":true},{"id":87,"first":"Sandra","last":"Resendiz","email":"samla82@aol.com","phone":"+17135158282","birthday":"","tier":"Friends Club","firstVisit":"2012-12-21","lastVisit":"2026-05-12","visitCount":17,"lifetimeSpend":2071.63,"notes":"","joined":"2012-12-21","active":true},{"id":88,"first":"Shiela","last":"Hibler","email":"grodrg5@me.com","phone":"+12815077070","birthday":"","tier":"Friends Club","firstVisit":"2019-10-17","lastVisit":"2026-06-10","visitCount":9,"lifetimeSpend":895.32,"notes":"","joined":"2019-10-17","active":true},{"id":89,"first":"Stephanie","last":"Lopez","email":"steph.lopez85@yahoo.com","phone":"+18329177975","birthday":"","tier":"Friends Club","firstVisit":"2025-09-10","lastVisit":"2026-06-10","visitCount":3,"lifetimeSpend":370.68,"notes":"","joined":"2025-09-10","active":true},{"id":90,"first":"Stephanie","last":"Zuniga Gaytan","email":"stephanie.zuniga.gaytan@gmail.com","phone":"+18325373396","birthday":"","tier":"Friends Club","firstVisit":"2023-11-21","lastVisit":"2026-06-14","visitCount":9,"lifetimeSpend":1503.18,"notes":"","joined":"2023-11-21","active":true},{"id":91,"first":"William","last":"Thrash","email":"theredwombat@gmail.com","phone":"+17134938053","birthday":"02/27","tier":"Friends Club","firstVisit":"2025-01-13","lastVisit":"2026-06-16","visitCount":4,"lifetimeSpend":255.19,"notes":"","joined":"2025-01-13","active":true},{"id":92,"first":"Zeke","last":"Rubio","email":"ezrubio91@gmail.com","phone":"+18325614797","birthday":"","tier":"Friends Club","firstVisit":"2026-04-26","lastVisit":"2026-06-10","visitCount":2,"lifetimeSpend":217.58,"notes":"","joined":"2026-04-26","active":true},{"id":93,"first":"Stevie","last":"Jimenez Villa","email":"steve.jimenez2020@gmail.com","phone":"+13469320778","birthday":"07/26","tier":"Groupie","firstVisit":"2026-07-08","lastVisit":"2026-07-08","visitCount":1,"lifetimeSpend":0,"notes":"","joined":"2026-07-08","active":true}];
   DB.save();
 }
 
@@ -273,19 +344,24 @@ function render() {
   var todayStr = new Date().toISOString().split('T')[0];
   var pending = DB.appointments.filter(function(a){ return a.status === 'pending'; });
   var todayAppts = DB.appointments.filter(function(a){ return a.date === todayStr && a.status === 'approved'; });
-  var revenue = DB.appointments.filter(function(a){ return a.status === 'approved'; }).reduce(function(s,a){ return s + (parseFloat(a.amount)||0); }, 0);
+
+  // Revenue = approved appointments + logged visits
+  var apptRev = DB.appointments.filter(function(a){ return a.status==='approved'; }).reduce(function(s,a){ return s+(parseFloat(a.amount)||0); },0);
+  var visitRev = DB.visits.reduce(function(s,v){ return s+(parseFloat(v.amount)||0); },0);
 
   document.getElementById('kpiPending').textContent = pending.length;
   document.getElementById('kpiToday').textContent = todayAppts.length;
-  document.getElementById('kpiRevenue').textContent = '$' + revenue.toLocaleString();
+  document.getElementById('kpiRevenue').textContent = '$' + (apptRev+visitRev).toLocaleString();
   document.getElementById('kpiMembers').textContent = DB.clients.length;
+
+  var tierClass = function(t){ return t==='Beauty Elite'?'tier-elite':t==='Friends Club'?'tier-friends':t==='Groupie'?'tier-groupie':'tier-new'; };
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   // Pending list
   var pl = document.getElementById('pendingList');
   if (!pending.length) {
     pl.innerHTML = '<div class="empty"><div class="empty-icon">📬</div>No pending requests.</div>';
   } else {
-    var tierClass = function(t){ return t==='Beauty Elite'?'tier-elite':t==='Friends Club'?'tier-friends':t==='Groupie'?'tier-groupie':'tier-new'; };
     pl.innerHTML = pending.map(function(a) {
       return '<div class="card">' +
         '<div class="card-top">' +
@@ -303,22 +379,49 @@ function render() {
     }).join('');
   }
 
-  // Client list
+  // Visit history — combine logged visits + approved appointments, sorted newest first
+  var allVisits = DB.visits.concat(
+    DB.appointments.filter(function(a){ return a.status==='approved'; })
+  ).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+
+  var vl = document.getElementById('visitList');
+  if (!allVisits.length) {
+    vl.innerHTML = '<div class="empty"><div class="empty-icon">✂️</div>No visits logged yet. Tap "Log Visit" to add past appointments from January onwards.</div>';
+  } else {
+    vl.innerHTML = allVisits.slice(0,50).map(function(v) {
+      var client = DB.clients.find(function(c){ return c.id===v.clientId; });
+      var name = v.clientName || (client ? client.first+' '+client.last : '—');
+      var tier = v.tier || (client ? client.tier : 'New Client');
+      return '<div class="card">' +
+        '<div class="card-top">' +
+          '<div>' +
+            '<div class="card-name">'+name+'<span class="card-tier '+tierClass(tier)+'" style="margin-left:8px;">'+tier+'</span></div>' +
+            '<div class="card-service">'+v.service+'</div>' +
+            '<div class="card-meta">'+v.date+(v.stylist?' · '+v.stylist:'')+(v.addon?' · '+v.addon:'')+(v.perk&&v.perk!=='None'?' · 🎁 '+v.perk:'')+'</div>' +
+          '</div>' +
+          '<div class="card-amount">$'+(v.amount||'—')+'</div>' +
+        '</div>' +
+      '</div>';
+    }).join('') + (allVisits.length>50?'<div style="text-align:center;font-size:12px;color:rgba(43,31,22,0.4);padding:12px;">'+allVisits.length+' total visits</div>':'');
+  }
+
+  // Client list — shows visit count and lifetime spend from both sources
   var cl = document.getElementById('clientList');
   if (!DB.clients.length) {
     cl.innerHTML = '<div class="empty"><div class="empty-icon">👤</div>No members yet.</div>';
   } else {
-    var tierClass = function(t){ return t==='Beauty Elite'?'tier-elite':t==='Friends Club'?'tier-friends':t==='Groupie'?'tier-groupie':'tier-new'; };
-    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     cl.innerHTML = DB.clients.map(function(c) {
-      var visits = DB.appointments.filter(function(a){ return a.clientId === c.id && a.status === 'approved'; }).length;
-      var spent = DB.appointments.filter(function(a){ return a.clientId === c.id && a.status === 'approved'; }).reduce(function(s,a){ return s+(parseFloat(a.amount)||0); },0);
+      var cVisits = DB.visits.filter(function(v){ return v.clientId===c.id; });
+      var cAppts = DB.appointments.filter(function(a){ return a.clientId===c.id && a.status==='approved'; });
+      var totalVisits = cVisits.length + cAppts.length;
+      var totalSpent = cVisits.reduce(function(s,v){ return s+(parseFloat(v.amount)||0); },0) +
+                       cAppts.reduce(function(s,a){ return s+(parseFloat(a.amount)||0); },0);
       var bday = c.birthday ? (function(b){ var p=b.split('/'); return p.length===2?months[parseInt(p[0])-1]+' '+p[1]:b; })(c.birthday) : '';
       return '<div class="card">' +
         '<div class="card-top">' +
           '<div>' +
             '<div class="card-name">'+c.first+' '+c.last+'<span class="card-tier '+tierClass(c.tier)+'" style="margin-left:8px;">'+c.tier+'</span></div>' +
-            '<div class="card-meta">'+(bday?'🎂 '+bday+' · ':'')+visits+' visit'+(visits!==1?'s':'')+' · $'+spent.toLocaleString()+' lifetime</div>' +
+            '<div class="card-meta">'+(bday?'🎂 '+bday+' · ':'')+totalVisits+' visit'+(totalVisits!==1?'s':'')+' · $'+totalSpent.toLocaleString()+' lifetime</div>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -347,6 +450,7 @@ function invoice(id) {
 function openAdd() {
   document.getElementById('a-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('addModal').classList.add('open');
+
 }
 function openRegister() {
   document.getElementById('regModal').classList.add('open');
@@ -410,6 +514,68 @@ function saveClient() {
   document.getElementById('r-tier').value = 'New Client';
   render();
   alert('✓ ' + first + ' ' + last + ' added to the Circle.');
+}
+
+
+function openLog() {
+  selectedClientId = null;
+  document.getElementById('l-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('l-name').value = '';
+  document.getElementById('l-suggestions').style.display = 'none';
+  document.getElementById('logModal').classList.add('open');
+}
+
+function suggestClient(val) {
+  var box = document.getElementById('l-suggestions');
+  if (!val || val.length < 2) { box.style.display='none'; return; }
+  var matches = DB.clients.filter(function(c){
+    return (c.first+' '+c.last).toLowerCase().indexOf(val.toLowerCase()) > -1;
+  }).slice(0,5);
+  if (!matches.length) { box.style.display='none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = matches.map(function(c) {
+    return '<div onclick="pickClient(\''+c.id+'\')" style="padding:10px 14px;cursor:pointer;border-bottom:0.5px solid rgba(43,31,22,0.08);font-size:13px;">'+
+      c.first+' '+c.last+'<span style="font-size:11px;color:rgba(43,31,22,0.4);margin-left:8px;">'+c.tier+'</span></div>';
+  }).join('');
+}
+
+var selectedClientId = null;
+function pickClient(id) {
+  var c = DB.clients.find(function(x){ return x.id===parseInt(id); });
+  if (!c) return;
+  document.getElementById('l-name').value = c.first+' '+c.last;
+  document.getElementById('l-suggestions').style.display = 'none';
+  selectedClientId = c.id;
+}
+
+function saveVisit() {
+  var name = document.getElementById('l-name').value.trim();
+  var service = document.getElementById('l-service').value;
+  var date = document.getElementById('l-date').value;
+  var amount = document.getElementById('l-amount').value;
+  if (!name || !service || !date || !amount) {
+    alert('Please fill in client name, service, date, and amount.'); return;
+  }
+  var client = selectedClientId
+    ? DB.clients.find(function(c){ return c.id===selectedClientId; })
+    : DB.clients.find(function(c){ return (c.first+' '+c.last).toLowerCase()===name.toLowerCase(); });
+  var visit = {
+    id: Date.now(), clientId: client?client.id:null, clientName: name,
+    tier: client?client.tier:'New Client', service: service, date: date,
+    amount: parseFloat(amount), stylist: document.getElementById('l-stylist').value,
+    addon: document.getElementById('l-addon').value,
+    perk: document.getElementById('l-perk').value,
+    notes: document.getElementById('l-notes').value.trim(),
+    loggedAt: new Date().toISOString()
+  };
+  DB.visits.push(visit);
+  DB.save();
+  close('logModal');
+  selectedClientId = null;
+  ['l-name','l-amount','l-notes'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['l-service','l-addon','l-perk'].forEach(function(id){ document.getElementById(id).selectedIndex=0; });
+  render();
+  alert('✓ Visit logged for '+name+' — $'+amount);
 }
 
 render();
