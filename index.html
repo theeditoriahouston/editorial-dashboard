@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="The Editorial">
+<meta name="theme-color" content="#1c1209">
+<title>The Editorial — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:#f5ede4;color:#2b1f16;min-height:100vh;}
+
+/* ── HEADER ── */
+.hdr{background:#1c1209;padding:20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.hdr-brand{font-family:'Playfair Display',serif;font-size:18px;color:#fff;font-weight:400;}
+.hdr-brand em{font-style:italic;color:#e0a888;}
+.hdr-btn{padding:8px 16px;border-radius:4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;border:none;transition:all 0.15s;}
+.hdr-btn.primary{background:#c97a52;color:#fff;}
+.hdr-btn.ghost{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);}
+
+/* ── KPI CARDS ── */
+.kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px;}
+.kpi{background:#fff;border-radius:8px;padding:16px;border:0.5px solid rgba(43,31,22,0.1);}
+.kpi-label{font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(43,31,22,0.4);margin-bottom:8px;}
+.kpi-val{font-family:'Playfair Display',serif;font-size:30px;font-weight:700;color:#1c1209;line-height:1;}
+.kpi-sub{font-size:11px;color:rgba(43,31,22,0.4);margin-top:4px;}
+
+/* ── SECTIONS ── */
+.section{padding:0 16px 16px;}
+.section-title{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#8a7558;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+.add-btn{padding:6px 12px;background:#c97a52;color:#fff;border:none;border-radius:4px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;font-family:'Inter',sans-serif;}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:8px;padding:16px;margin-bottom:8px;border:0.5px solid rgba(43,31,22,0.1);}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+.card-name{font-size:14px;font-weight:600;color:#1c1209;}
+.card-service{font-size:12px;color:#c97a52;margin-top:2px;}
+.card-meta{font-size:11px;color:rgba(43,31,22,0.5);margin-top:2px;}
+.card-amount{font-size:15px;font-weight:700;color:#1c1209;}
+.card-tier{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;padding:3px 8px;border-radius:20px;font-weight:600;}
+.tier-elite{background:rgba(107,79,48,0.12);color:#6b4f30;}
+.tier-friends{background:rgba(45,90,122,0.12);color:#2d5a7a;}
+.tier-groupie{background:rgba(45,107,69,0.12);color:#2d6b45;}
+.tier-new{background:rgba(138,117,88,0.12);color:#8a7558;}
+.card-actions{display:flex;gap:6px;margin-top:10px;}
+.btn-approve{padding:8px 14px;background:#2a6b45;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;}
+.btn-invoice{padding:8px 14px;background:none;border:0.5px solid rgba(43,31,22,0.2);color:rgba(43,31,22,0.7);border-radius:4px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;}
+.btn-decline{padding:8px 14px;background:none;border:0.5px solid rgba(43,31,22,0.2);color:rgba(43,31,22,0.4);border-radius:4px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:32px 20px;color:rgba(43,31,22,0.35);font-size:13px;}
+.empty-icon{font-size:28px;margin-bottom:8px;opacity:0.4;}
+
+/* ── MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(28,18,9,0.6);z-index:500;align-items:flex-start;justify-content:center;padding:60px 16px 20px;overflow-y:auto;}
+.overlay.open{display:flex;}
+.modal{background:#fff;border-radius:10px;width:100%;max-width:480px;overflow:hidden;}
+.modal-hd{background:#1c1209;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;}
+.modal-hd-title{font-family:'Playfair Display',serif;font-size:17px;color:#fff;font-weight:400;}
+.modal-hd-title em{font-style:italic;color:#e0a888;}
+.modal-close{background:none;border:none;color:rgba(255,255,255,0.5);font-size:22px;cursor:pointer;line-height:1;}
+.modal-body{padding:20px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(43,31,22,0.5);margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:11px 13px;border:0.5px solid rgba(43,31,22,0.15);border-radius:4px;font-family:'Inter',sans-serif;font-size:14px;color:#1c1209;background:#fdf6ee;outline:none;}
+.field input:focus,.field select:focus{border-color:#c97a52;}
+.field textarea{min-height:70px;resize:vertical;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.modal-submit{width:100%;padding:13px;background:#c97a52;color:#fff;border:none;border-radius:4px;font-family:'Inter',sans-serif;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;font-weight:500;margin-top:6px;}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#1c1209;border-top:0.5px solid rgba(255,255,255,0.08);display:flex;padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:200;}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px;background:none;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.bnav-btn span:first-child{font-size:18px;}
+.bnav-btn span:last-child{font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,250,244,0.4);font-family:'Inter',sans-serif;}
+.bnav-btn.active span:last-child{color:#e0a888;}
+
+body{padding-bottom:70px;}
+
+@media(min-width:600px){
+  .kpi-row{grid-template-columns:repeat(4,1fr);}
+  .bottom-nav{display:none;}
+  body{padding-bottom:0;}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">The <em>Editorial</em></div>
+  <div style="display:flex;gap:8px;">
+    <button class="hdr-btn ghost" onclick="openAdd()">+ Add</button>
+    <button class="hdr-btn primary" onclick="openRegister()">Register Client</button>
+  </div>
+</div>
+
+<!-- KPI CARDS -->
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="kpi-label">Pending</div>
+    <div class="kpi-val" id="kpiPending">0</div>
+    <div class="kpi-sub">Requests</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Today</div>
+    <div class="kpi-val" id="kpiToday">0</div>
+    <div class="kpi-sub">Appointments</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Revenue</div>
+    <div class="kpi-val" id="kpiRevenue">$0</div>
+    <div class="kpi-sub">This week</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Members</div>
+    <div class="kpi-val" id="kpiMembers">0</div>
+    <div class="kpi-sub">Circle total</div>
+  </div>
+</div>
+
+<!-- PENDING REQUESTS -->
+<div class="section">
+  <div class="section-title">
+    <span>Booking Requests</span>
+    <button class="add-btn" onclick="openAdd()">+ Add Appointment</button>
+  </div>
+  <div id="pendingList">
+    <div class="empty"><div class="empty-icon">📬</div>No pending requests. New bookings appear here when clients submit.</div>
+  </div>
+</div>
+
+<!-- CLIENT LIST -->
+<div class="section">
+  <div class="section-title">
+    <span>Circle Members</span>
+    <button class="add-btn" onclick="openRegister()">+ Register</button>
+  </div>
+  <div id="clientList">
+    <div class="empty"><div class="empty-icon">👤</div>No members yet. Register your first client above.</div>
+  </div>
+</div>
+
+<!-- ADD APPOINTMENT MODAL -->
+<div class="overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-hd-title">Add an <em>Appointment</em></div>
+      <button class="modal-close" onclick="close('addModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Client Name *</label><input id="a-name" placeholder="Full name"></div>
+      <div class="field"><label>Service *</label>
+        <select id="a-service">
+          <option value="">Select service</option>
+          <option>The Grace — $90</option><option>The Lily — $60</option>
+          <option>The Emma — $95</option><option>The Sarah — $125</option>
+          <option>The Anna — $215</option><option>The Chloe — $185</option>
+          <option>The Ava — $245</option><option>The Harper Consult — $25</option>
+          <option>The Press — $165+</option><option>The Wave — $150+</option>
+          <option>The Olivia — $60</option><option>The Cher — $90</option>
+          <option>The James — $60</option><option>The Thomas — $90</option>
+          <option>The Mini Edit — $45</option><option>Consultation — $25</option>
+          <option>Evelyn Session</option><option>Block Time Off</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Date *</label><input type="date" id="a-date"></div>
+        <div class="field"><label>Time *</label><input type="time" id="a-time" value="10:00"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Amount ($)</label><input type="number" id="a-amount" placeholder="0"></div>
+        <div class="field"><label>Stylist</label>
+          <select id="a-stylist"><option>Gregory</option><option>Evelyn</option></select>
+        </div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="a-notes" placeholder="Color formula, client notes..."></textarea></div>
+      <button class="modal-submit" onclick="saveAppointment()">Add to Schedule →</button>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTER CLIENT MODAL -->
+<div class="overlay" id="regModal">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-hd-title">Register a <em>Client</em></div>
+      <button class="modal-close" onclick="close('regModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field"><label>First Name *</label><input id="r-first" placeholder="First"></div>
+        <div class="field"><label>Last Name *</label><input id="r-last" placeholder="Last"></div>
+      </div>
+      <div class="field"><label>Email</label><input id="r-email" type="email" placeholder="email@example.com"></div>
+      <div class="field"><label>Phone</label><input id="r-phone" type="tel" placeholder="(713) 000-0000"></div>
+      <div class="field-row">
+        <div class="field"><label>Birthday Month</label>
+          <select id="r-bmonth">
+            <option value="">Month</option>
+            <option value="01">January</option><option value="02">February</option>
+            <option value="03">March</option><option value="04">April</option>
+            <option value="05">May</option><option value="06">June</option>
+            <option value="07">July</option><option value="08">August</option>
+            <option value="09">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select>
+        </div>
+        <div class="field"><label>Birthday Day</label>
+          <select id="r-bday"><option value="">Day</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+            <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+            <option>11</option><option>12</option><option>13</option><option>14</option><option>15</option>
+            <option>16</option><option>17</option><option>18</option><option>19</option><option>20</option>
+            <option>21</option><option>22</option><option>23</option><option>24</option><option>25</option>
+            <option>26</option><option>27</option><option>28</option><option>29</option><option>30</option>
+            <option>31</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Circle Tier</label>
+        <select id="r-tier">
+          <option value="New Client">New Client</option>
+          <option value="Groupie">Groupie</option>
+          <option value="Friends Club">Friends Club</option>
+          <option value="Beauty Elite">Beauty Elite</option>
+        </select>
+      </div>
+      <div class="field"><label>Color Formula / Notes</label><textarea id="r-notes" placeholder="Level, tone, developer, preferences..."></textarea></div>
+      <button class="modal-submit" onclick="saveClient()">Add to Circle →</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="bnav-btn active" onclick="scrollTo(0,0)"><span>🗓</span><span>Schedule</span></button>
+  <button class="bnav-btn" onclick="openAdd()"><span>＋</span><span>Add</span></button>
+  <button class="bnav-btn" onclick="openRegister()"><span>👤</span><span>Register</span></button>
+  <button class="bnav-btn" onclick="window.open('https://theeditorialhouston.com/book.html','_blank')"><span>✦</span><span>Booking</span></button>
+</div>
+
+<script>
+// ── DATA ──
+var DB = {
+  appointments: JSON.parse(localStorage.getItem('ed_appts') || '[]'),
+  clients: JSON.parse(localStorage.getItem('ed_clients') || '[]'),
+  save: function() {
+    localStorage.setItem('ed_appts', JSON.stringify(this.appointments));
+    localStorage.setItem('ed_clients', JSON.stringify(this.clients));
+  }
+};
+
+// Seed Beauty Elite if first load
+if (!DB.clients.length) {
+  var today = new Date().toISOString().split('T')[0];
+  DB.clients = [
+    {id:1,first:'Alieda', last:'Martinez',email:'',phone:'',tier:'Beauty Elite',joined:today},
+    {id:2,first:'Israel', last:'Garcia',  email:'',phone:'',tier:'Beauty Elite',joined:today},
+    {id:3,first:'Janelle',last:'Miller',  email:'',phone:'',tier:'Beauty Elite',joined:today},
+    {id:4,first:'Norma',  last:'Juarez',  email:'',phone:'',tier:'Beauty Elite',joined:today},
+    {id:5,first:'Riva',   last:'Saenz',   email:'',phone:'',tier:'Beauty Elite',joined:today},
+    {id:6,first:'Selina', last:'Rios',    email:'',phone:'',tier:'Beauty Elite',joined:today},
+    {id:7,first:'Priya',  last:'Gopinath',email:'',phone:'',tier:'Beauty Elite',joined:today},
+    {id:8,first:'Anthony',last:'Gamez',   email:'',phone:'',tier:'Beauty Elite',joined:today}
+  ];
+  DB.save();
+}
+
+// ── RENDER ──
+function render() {
+  var todayStr = new Date().toISOString().split('T')[0];
+  var pending = DB.appointments.filter(function(a){ return a.status === 'pending'; });
+  var todayAppts = DB.appointments.filter(function(a){ return a.date === todayStr && a.status === 'approved'; });
+  var revenue = DB.appointments.filter(function(a){ return a.status === 'approved'; }).reduce(function(s,a){ return s + (parseFloat(a.amount)||0); }, 0);
+
+  document.getElementById('kpiPending').textContent = pending.length;
+  document.getElementById('kpiToday').textContent = todayAppts.length;
+  document.getElementById('kpiRevenue').textContent = '$' + revenue.toLocaleString();
+  document.getElementById('kpiMembers').textContent = DB.clients.length;
+
+  // Pending list
+  var pl = document.getElementById('pendingList');
+  if (!pending.length) {
+    pl.innerHTML = '<div class="empty"><div class="empty-icon">📬</div>No pending requests.</div>';
+  } else {
+    var tierClass = function(t){ return t==='Beauty Elite'?'tier-elite':t==='Friends Club'?'tier-friends':t==='Groupie'?'tier-groupie':'tier-new'; };
+    pl.innerHTML = pending.map(function(a) {
+      return '<div class="card">' +
+        '<div class="card-top">' +
+          '<div><div class="card-name">'+a.clientName+'<span class="card-tier '+tierClass(a.tier)+'" style="margin-left:8px;">'+a.tier+'</span></div>' +
+          '<div class="card-service">'+a.service+'</div>' +
+          '<div class="card-meta">'+a.date+' at '+a.time+'</div></div>' +
+          '<div class="card-amount">$'+(a.amount||'—')+'</div>' +
+        '</div>' +
+        '<div class="card-actions">' +
+          '<button class="btn-approve" onclick="approve('+a.id+')">Approve</button>' +
+          '<button class="btn-invoice" onclick="invoice('+a.id+')">Send Invoice</button>' +
+          '<button class="btn-decline" onclick="decline('+a.id+')">Decline</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Client list
+  var cl = document.getElementById('clientList');
+  if (!DB.clients.length) {
+    cl.innerHTML = '<div class="empty"><div class="empty-icon">👤</div>No members yet.</div>';
+  } else {
+    var tierClass = function(t){ return t==='Beauty Elite'?'tier-elite':t==='Friends Club'?'tier-friends':t==='Groupie'?'tier-groupie':'tier-new'; };
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    cl.innerHTML = DB.clients.map(function(c) {
+      var visits = DB.appointments.filter(function(a){ return a.clientId === c.id && a.status === 'approved'; }).length;
+      var spent = DB.appointments.filter(function(a){ return a.clientId === c.id && a.status === 'approved'; }).reduce(function(s,a){ return s+(parseFloat(a.amount)||0); },0);
+      var bday = c.birthday ? (function(b){ var p=b.split('/'); return p.length===2?months[parseInt(p[0])-1]+' '+p[1]:b; })(c.birthday) : '';
+      return '<div class="card">' +
+        '<div class="card-top">' +
+          '<div>' +
+            '<div class="card-name">'+c.first+' '+c.last+'<span class="card-tier '+tierClass(c.tier)+'" style="margin-left:8px;">'+c.tier+'</span></div>' +
+            '<div class="card-meta">'+(bday?'🎂 '+bday+' · ':'')+visits+' visit'+(visits!==1?'s':'')+' · $'+spent.toLocaleString()+' lifetime</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+}
+
+// ── ACTIONS ──
+function approve(id) {
+  var a = DB.appointments.find(function(x){ return x.id===id; });
+  if (a) { a.status = 'approved'; DB.save(); render(); }
+}
+function decline(id) {
+  if (!confirm('Decline this request?')) return;
+  var a = DB.appointments.find(function(x){ return x.id===id; });
+  if (a) { a.status = 'declined'; DB.save(); render(); }
+}
+function invoice(id) {
+  var a = DB.appointments.find(function(x){ return x.id===id; });
+  if (!a) return;
+  var body = 'Hi ' + a.clientName + ',\n\nYour booking for ' + a.service + ' on ' + a.date + ' is approved.\n\nPlease complete payment to confirm.\n\nThank you,\nGregory\nThe Editorial';
+  window.location.href = 'mailto:' + (a.email||'') + '?subject=Your Editorial Appointment&body=' + encodeURIComponent(body);
+}
+
+// ── MODALS ──
+function openAdd() {
+  document.getElementById('a-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('addModal').classList.add('open');
+}
+function openRegister() {
+  document.getElementById('regModal').classList.add('open');
+}
+function close(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close on overlay click
+['addModal','regModal'].forEach(function(id) {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) close(id);
+  });
+});
+
+function saveAppointment() {
+  var name = document.getElementById('a-name').value.trim();
+  var service = document.getElementById('a-service').value;
+  var date = document.getElementById('a-date').value;
+  var time = document.getElementById('a-time').value;
+  if (!name || !service || !date) { alert('Please fill in name, service, and date.'); return; }
+  var appt = {
+    id: Date.now(), clientName: name, service: service,
+    date: date, time: time,
+    amount: document.getElementById('a-amount').value,
+    stylist: document.getElementById('a-stylist').value,
+    notes: document.getElementById('a-notes').value,
+    status: 'approved', tier: 'New Client'
+  };
+  // Try to match existing client
+  var match = DB.clients.find(function(c){ return (c.first+' '+c.last).toLowerCase() === name.toLowerCase(); });
+  if (match) { appt.clientId = match.id; appt.tier = match.tier; }
+  DB.appointments.push(appt);
+  DB.save();
+  close('addModal');
+  ['a-name','a-amount','a-notes'].forEach(function(id){ document.getElementById(id).value=''; });
+  render();
+  alert('✓ Appointment added for ' + name);
+}
+
+function saveClient() {
+  var first = document.getElementById('r-first').value.trim();
+  var last = document.getElementById('r-last').value.trim();
+  if (!first || !last) { alert('Please enter first and last name.'); return; }
+  var bm = document.getElementById('r-bmonth').value;
+  var bd = document.getElementById('r-bday').value;
+  var client = {
+    id: Date.now(), first: first, last: last,
+    email: document.getElementById('r-email').value.trim(),
+    phone: document.getElementById('r-phone').value.trim(),
+    birthday: (bm && bd) ? bm+'/'+bd : '',
+    tier: document.getElementById('r-tier').value,
+    notes: document.getElementById('r-notes').value.trim(),
+    joined: new Date().toISOString().split('T')[0]
+  };
+  DB.clients.push(client);
+  DB.save();
+  close('regModal');
+  ['r-first','r-last','r-email','r-phone','r-notes'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['r-bmonth','r-bday'].forEach(function(id){ document.getElementById(id).selectedIndex=0; });
+  document.getElementById('r-tier').value = 'New Client';
+  render();
+  alert('✓ ' + first + ' ' + last + ' added to the Circle.');
+}
+
+render();
+</script>
+</body>
+</html>
