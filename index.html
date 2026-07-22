@@ -1525,6 +1525,42 @@ function renderSlotWaitlist() {
 // Init gap tracker
 renderGapWeek();
 
+
+// ══════════════════════════════════════════
+// SQUARE INTEGRATION
+// ══════════════════════════════════════════
+async function syncSquare() {
+  var btn = document.getElementById('squareSyncBtn');
+  if (btn) { btn.textContent = '⟳ Syncing...'; btn.style.opacity = '0.6'; }
+
+  try {
+    var res = await fetch(API.base + '/square/sync-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Dashboard': 'true' }
+    });
+    var data = await res.json();
+
+    if (data.success) {
+      var s = data.synced;
+      var msg = '✓ Square synced:\n';
+      msg += '  ' + s.customers + ' customers checked\n';
+      msg += '  ' + s.appointments + ' upcoming appointments pulled\n';
+      if (s.errors && s.errors.length) msg += '  Notes: ' + s.errors.join(', ');
+      alert(msg);
+
+      // Reload data from cloud
+      await DB.init();
+      render();
+    } else {
+      alert('Sync error: ' + (data.error || 'Unknown error'));
+    }
+  } catch(e) {
+    alert('Could not reach Square: ' + e.message);
+  }
+
+  if (btn) { btn.textContent = '⬇ Square'; btn.style.opacity = '1'; }
+}
+
 render();
 </script>
 </body>
